@@ -1,7 +1,7 @@
-
 const express = require("express");
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
+
 
 
 const appleWatchCollection = [
@@ -73,15 +73,19 @@ const appleWatchCollection = [
   }
 ];
 
+
+
+let cart = []; // Cart to hold selected items
+
 // Middleware to parse JSON
 app.use(express.json());
 
-
+// Get all products
 app.get("/products", (req, res) => {
   res.json(appleWatchCollection);
 });
 
-
+// Get product by ID
 app.get("/products/:id", (req, res) => {
   const id = parseInt(req.params.id);
   const watch = appleWatchCollection.find((item) => item.id === id);
@@ -91,6 +95,50 @@ app.get("/products/:id", (req, res) => {
   } else {
     res.status(404).json({ message: "Watch not found" });
   }
+});
+
+// Get cart items
+app.get("/cart", (req, res) => {
+  res.json(cart);
+});
+
+// Add item to cart
+app.post("/cart", (req, res) => {
+  const { id, quantity } = req.body;
+  const product = appleWatchCollection.find((item) => item.id === id);
+
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  // Check if item already exists in cart
+  const cartItem = cart.find((item) => item.id === id);
+  if (cartItem) {
+    cartItem.quantity += quantity; // Update quantity
+  } else {
+    cart.push({ ...product, quantity }); // Add new item to cart
+  }
+
+  res.status(200).json({ message: "Product added to cart", cart });
+});
+
+// Remove item from cart
+app.delete("/cart/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const initialLength = cart.length;
+  cart = cart.filter((item) => item.id !== id);
+
+  if (cart.length === initialLength) {
+    return res.status(404).json({ message: "Item not found in cart" });
+  }
+
+  res.status(200).json({ message: "Item removed from cart", cart });
+});
+
+// Clear cart
+app.delete("/cart", (req, res) => {
+  cart = [];
+  res.status(200).json({ message: "Cart cleared", cart });
 });
 
 // Start the server
